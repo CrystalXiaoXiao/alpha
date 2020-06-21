@@ -2,7 +2,6 @@ from newsapi import NewsApiClient
 from datetime import datetime, timedelta
 import pandas as pd 
 from credentials.api_key import key
-from pytrends.request import TrendReq
 from scraper import scraper_bbc, scraper_nbc, scraper_cnn
 import json
 
@@ -10,6 +9,8 @@ newsapi = NewsApiClient(api_key=key)
 
 
 def find_news():
+    with open('article_collection.json', 'w', encoding='utf-8') as output_json:
+        pass
     top_headline = newsapi.get_top_headlines(
                                              sources='bbc-news,nbc-news, cnn',
                                              page_size=10,
@@ -51,8 +52,6 @@ def to_json(title, url, image, content):
 
 
 
-with open('article_collection.json', 'w', encoding='utf-8') as output_json:
-    pass
 find_news()
 
     
