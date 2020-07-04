@@ -1,5 +1,7 @@
 from bs4 import BeautifulSoup
+from topic_detection import preprocessing
 import requests
+import re
 
 def scraper_bbc(url):
 
@@ -18,6 +20,7 @@ def scraper_bbc(url):
     article = ''
     for x in page.findAll('p'):
         article = article + ' ' +   x.text
+        article = clean_article(article)
     return article
 
 def scraper_nbc(url):
@@ -26,8 +29,11 @@ def scraper_nbc(url):
 
     page = soup.find('div',  {"class": "article-body__content"})
     article = ''
+        
     for x in page.findAll('p'):
-        article = article + ' ' + x.text
+        article = article + ' ' +   x.text
+        article = clean_article(article)
+
     return article
 
 def scraper_cnn(url):
@@ -37,14 +43,18 @@ def scraper_cnn(url):
     page = soup.find('div',  {"class": "l-container"})
     article = ''
     for x in page.findAll('div',{"class":"zn-body__paragraph"}):
-        article = article + ' ' + x.text
+        article = article + ' ' +   x.text
+        article = clean_article(article)
+
     return article
 
+def clean_article(article):
+    article = article.replace('  ', ' ') 
+    article = re.sub('\[\d+\]', '', article) #[1]/[2]/[n] => ''
+    article = re.sub('\d+.', '', article) #1. / 2. => ''
+    article = re.sub('\"', '', article)
+    article = article.replace('\n\n', '\n')
+    article = preprocessing(article)
 
-
-
-# url = "http://www.bbc.co.uk/news/live/world-53039952"
-# # # scraper_bbc(url)
-# scraper_nbc(url)
-# scraper_cnn(url)
+    return article
 

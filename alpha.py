@@ -3,17 +3,16 @@ from datetime import datetime, timedelta
 import pandas as pd 
 from credentials.api_key import key
 from scraper import scraper_bbc, scraper_nbc, scraper_cnn
+from topic_detection import topic_detection
 import json
 
 newsapi = NewsApiClient(api_key=key)
 
 
 def find_news():
-    # with open('article_collection.json', 'w', encoding='utf-8') as output_json:
-    #     pass
     top_headline = newsapi.get_top_headlines(
                                              sources='bbc-news,nbc-news, cnn',
-                                             page_size=10,
+                                             page_size=12,
                                              page= 1,
     )                                           
 
@@ -24,7 +23,7 @@ def find_news():
     for x, y in enumerate(articles):
         print(y["title"] + ' : ' + y["url"])
         
-        if (y["content"] is "") or ('/live/' in y["url"] or '/live-news/'in y["url"]): 
+        if (y["content"] is None) or ('/live/' in y["url"] or '/live-news/'in y["url"] or '/videos/' in y["url"]): 
             None
         elif counter < 5:
             if y["source"]["name"] == 'BBC News':
@@ -48,13 +47,13 @@ def find_news():
 
 
 def to_json(news):
-
+    
     with open('article_collection.json', 'w', encoding='utf-8') as output_json:
         json.dump(news, output_json, ensure_ascii=False, indent=4)
 
 
 
 find_news()
-
+topic_detection()
     
 
