@@ -27,9 +27,11 @@ def preprocessing(data):
     return article    
 
 def train_topic_detection():
-    news_df = pd.read_csv('dataset/bbc-text.csv')
+    # news_df = pd.read_csv('dataset/bbc-text.csv')
+    news_df = pd.read_json('dataset/News_Category_Dataset_v2.json', lines=True)
+    # print(news_df['category'].unique())
     count_vectorizer = CountVectorizer()
-    x_train_cv = count_vectorizer.fit_transform(news_df['text'])
+    x_train_cv = count_vectorizer.fit_transform(news_df['headline'])
     pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
 
     tfidf_transformer = TfidfTransformer()
@@ -44,6 +46,7 @@ def train_topic_detection():
     prediction = load_mnb.predict(x_test)
 
     result = pd.DataFrame({'actual_label': y_test, 'prediction_label':prediction})
+    # result.to_csv('result_dataset_2.csv', sep = ',')
     print(result)
 
     #https://www.youtube.com/watch?v=HeKchZ1dauM&t=15s => kalo mau nonton tutorial + repo githubnya 
@@ -59,5 +62,3 @@ def topic_detection():
     load_mnb = pickle.load(open('model/multinomial_nb.pkl', 'rb'))
     prediction = load_mnb.predict(news_tfidf)
     print(prediction)
-
-
