@@ -11,11 +11,20 @@ def scraper_bbc(url):
     if '/sport/' in url:
         sportCategory = ['/football/','/tennis/','/rugby/', '/cricket/', '/golf/']
         if any(cat in url for cat in sportCategory):
-            page = soup.find('div',  {"class": "story-body sp-story-body gel-body-copy"}) 
+            try:
+                page = soup.find('div',  {"class": "story-body sp-story-body gel-body-copy"}) 
+            except Exception as error:
+                print(error)
         else: #boxing, athletics, formula1, cycling, basketball, nfl, winter-sports, horse-racing
-            page = soup.find('div', {"class": "qa-story-body story-body gel-pica gel-10/12@m gel-7/8@l gs-u-ml0@l gs-u-pb++"})
+            try:
+                page = soup.find('div', {"class": "qa-story-body story-body gel-pica gel-10/12@m gel-7/8@l gs-u-ml0@l gs-u-pb++"})
+            except Exception as error:
+                print(error)
     else:
-        page = soup.find('div',  {"class": "story-body__inner"})
+        try:
+            page = soup.find('div',  {"class": "story-body__inner"})
+        except Exception as error:
+            print(error)
 
     article = ''
     for x in page.findAll('p'):
@@ -27,7 +36,10 @@ def scraper_nbc(url):
     html = requests.get(url).text
     soup = BeautifulSoup(html, 'html.parser')
 
-    page = soup.find('div',  {"class": "article-body__content"})
+    try:
+        page = soup.find('div',  {"class": "article-body__content"})
+    except Exception as error:
+        print(error)
     article = ''
         
     for x in page.findAll('p'):
@@ -40,7 +52,10 @@ def scraper_cnn(url):
     html = requests.get(url).text
     soup = BeautifulSoup(html, 'html.parser')
 
-    page = soup.find('div',  {"class": "l-container"})
+    try:
+        page = soup.find('div',  {"class": "l-container"})
+    except Exception as error:
+        print(error)
     article = ''
     for x in page.findAll('div',{"class":"zn-body__paragraph"}):
         article = article + ' ' +   x.text

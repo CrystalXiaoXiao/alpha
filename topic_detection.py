@@ -27,11 +27,10 @@ def preprocessing(data):
     return article    
 
 def train_topic_detection():
-    # news_df = pd.read_csv('dataset/bbc-text.csv')
-    news_df = pd.read_json('dataset/News_Category_Dataset_v2.json', lines=True)
-    # print(news_df['category'].unique())
+    news_df = pd.read_csv('dataset/bbc-text.csv')
+    # news_df = pd.read_json('dataset/News_Category_Dataset_v2.json', lines=True)
     count_vectorizer = CountVectorizer()
-    x_train_cv = count_vectorizer.fit_transform(news_df['headline'])
+    x_train_cv = count_vectorizer.fit_transform(news_df['text'])
     pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
 
     tfidf_transformer = TfidfTransformer()
