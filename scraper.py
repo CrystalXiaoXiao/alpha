@@ -13,7 +13,7 @@ def scraper_bbc(url):
         if any(cat in url for cat in sportCategory):
             page = soup.find('div',  {"class": "story-body sp-story-body gel-body-copy"}) 
         else: #boxing, athletics, formula1, cycling, basketball, nfl, winter-sports, horse-racing
-            page = soup.find('div', {"class": "qa-story-body story-body gel-pica gel-10/12@m gel-7/8@l gs-u-ml0@l gs-u-pb++"})
+            page = soup.find('div', {"class": "qa-story-body story-body gel-pica gel-10/12@m gel-7/8@l gs-u-ml0@l gs-u-pb++"})            
     else:
         page = soup.find('div',  {"class": "story-body__inner"})
 
@@ -28,8 +28,8 @@ def scraper_nbc(url):
     soup = BeautifulSoup(html, 'html.parser')
 
     page = soup.find('div',  {"class": "article-body__content"})
-    article = ''
-        
+    
+    article = ''    
     for x in page.findAll('p'):
         article = article + ' ' +   x.text
         article = clean_article(article)
@@ -41,6 +41,7 @@ def scraper_cnn(url):
     soup = BeautifulSoup(html, 'html.parser')
 
     page = soup.find('div',  {"class": "l-container"})
+
     article = ''
     for x in page.findAll('div',{"class":"zn-body__paragraph"}):
         article = article + ' ' +   x.text

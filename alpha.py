@@ -27,13 +27,22 @@ def find_news():
             None
         elif counter < 5:
             if y["source"]["name"] == 'BBC News':
-                content = scraper_bbc(y["url"])
+                try:
+                    content = scraper_bbc(y["url"])
+                except:
+                    return None
                     
             elif y["source"]["name"] == 'NBC News':
-                content = scraper_nbc(y["url"])
+                try:
+                    content = scraper_nbc(y["url"])
+                except:
+                    return None
 
             elif y["source"]["name"] == 'CNN':
-                content = scraper_cnn(y["url"])
+                try:
+                    content = scraper_cnn(y["url"])
+                except:
+                    return None
 
             news.append({
                 'title' : y["title"],

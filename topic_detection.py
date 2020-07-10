@@ -28,6 +28,7 @@ def preprocessing(data):
 
 def train_topic_detection():
     news_df = pd.read_csv('dataset/bbc-text.csv')
+    # news_df = pd.read_json('dataset/News_Category_Dataset_v2.json', lines=True)
     count_vectorizer = CountVectorizer()
     x_train_cv = count_vectorizer.fit_transform(news_df['text'])
     pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
@@ -44,6 +45,7 @@ def train_topic_detection():
     prediction = load_mnb.predict(x_test)
 
     result = pd.DataFrame({'actual_label': y_test, 'prediction_label':prediction})
+    # result.to_csv('result_dataset_2.csv', sep = ',')
     print(result)
 
     #https://www.youtube.com/watch?v=HeKchZ1dauM&t=15s => kalo mau nonton tutorial + repo githubnya 
@@ -59,5 +61,14 @@ def topic_detection():
     load_mnb = pickle.load(open('model/multinomial_nb.pkl', 'rb'))
     prediction = load_mnb.predict(news_tfidf)
     print(prediction)
+    add_prediction_to_json_output(prediction)
 
-
+def add_prediction_to_json_output(prediction):
+    with open('article_collection.json', 'rb') as file:
+        data = json.load(file)
+        for i in range(len(data)):
+            data[i]['predicted_topic'] = prediction[i]
+            # print(data[i])
+    
+    with open('article_collection.json', 'w', encoding='utf-8') as output_json:
+        json.dump(data, output_json, ensure_ascii=False, indent=4)
