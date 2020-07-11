@@ -64,11 +64,10 @@ def topic_detection():
     add_prediction_to_json_output(prediction)
 
 def add_prediction_to_json_output(prediction):
-    with open('article_collection.json', 'rb') as file:
-        data = json.load(file)
+    with open('article_collection.json', 'rb') as input_json:
+        data = json.load(input_json)
         for i in range(len(data)):
             data[i]['predicted_topic'] = prediction[i]
-            # print(data[i])
     
     with open('article_collection.json', 'w', encoding='utf-8') as output_json:
         json.dump(data, output_json, ensure_ascii=False, indent=4)
