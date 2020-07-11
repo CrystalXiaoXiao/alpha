@@ -30,19 +30,19 @@ def find_news():
                 try:
                     content = scraper_bbc(y["url"])
                 except:
-                    return None
+                    continue
                     
             elif y["source"]["name"] == 'NBC News':
                 try:
                     content = scraper_nbc(y["url"])
                 except:
-                    return None
+                    continue
 
             elif y["source"]["name"] == 'CNN':
                 try:
                     content = scraper_cnn(y["url"])
                 except:
-                    return None
+                    continue
 
             news.append({
                 'title' : y["title"],
