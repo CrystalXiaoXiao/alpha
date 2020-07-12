@@ -26,41 +26,38 @@ def find_news():
         if (y["content"] is None) or ('/live/' in y["url"] or '/live-news/'in y["url"] or '/videos/' in y["url"]): 
             None
         elif counter < 5:
-            if y["source"]["name"] == 'BBC News':
-                try:
+            try:
+                if y["source"]["name"] == 'BBC News':
                     content = scraper_bbc(y["url"])
-                except:
-                    continue
-                    
-            elif y["source"]["name"] == 'NBC News':
-                try:
+                    append_news(news, y["title"], y["url"], y["urlToImage"], content)
+                    counter = counter + 1
+
+                elif y["source"]["name"] == 'NBC News':
                     content = scraper_nbc(y["url"])
-                except:
-                    continue
+                    append_news(news, y["title"], y["url"], y["urlToImage"], content)
+                    counter = counter + 1
 
-            elif y["source"]["name"] == 'CNN':
-                try:
+                elif y["source"]["name"] == 'CNN':
                     content = scraper_cnn(y["url"])
-                except:
-                    continue
-
-            news.append({
-                'title' : y["title"],
-                'url' : y["url"], 
-                'image' : y["urlToImage"],
-                'content' : content 
-            })
-            counter = counter + 1
+                    append_news(news, y["title"], y["url"], y["urlToImage"], content)
+                    counter = counter + 1
+            except:
+                pass
     
     to_json(news)
 
+def append_news(news, title, url, image, content):
+    news.append({
+    'title' : title,
+    'url' : url, 
+    'image' : image,
+    'content' : content 
+    })
+
 
 def to_json(news):
-    
     with open('article_collection.json', 'w', encoding='utf-8') as output_json:
         json.dump(news, output_json, ensure_ascii=False, indent=4)
-
-
 
 find_news()
 topic_detection()

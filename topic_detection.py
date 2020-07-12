@@ -9,6 +9,7 @@ from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score, confusion_matrix
 
 
 #print(news_df.shape) Total 2225,2  
@@ -28,8 +29,9 @@ def preprocessing(data):
 
 def train_topic_detection():
     news_df = pd.read_csv('dataset/bbc-text.csv')
-    # news_df = pd.read_json('dataset/News_Category_Dataset_v2.json', lines=True)
     count_vectorizer = CountVectorizer()
+    # x_train_cv = count_vectorizer.fit_transform(news_df['text'])
+
     x_train_cv = count_vectorizer.fit_transform(news_df['text'])
     pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
 
@@ -38,14 +40,19 @@ def train_topic_detection():
     pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
 
     x_train, x_test, y_train, y_test = train_test_split(x_train_tfidf, news_df['category'], test_size=0.2)
-    clf = MultinomialNB().fit(x_train, y_train)
+    clf = MultinomialNB(alpha=0.12).fit(x_train, y_train) #hyperparameter harus di tune, gotta research more on this 
     pickle.dump(clf, open('model/multinomial_nb.pkl', 'wb'))
 
     load_mnb = pickle.load(open('model/multinomial_nb.pkl', 'rb'))
     prediction = load_mnb.predict(x_test)
 
     result = pd.DataFrame({'actual_label': y_test, 'prediction_label':prediction})
-    # result.to_csv('result_dataset_2.csv', sep = ',')
+
+    c_mat = confusion_matrix(y_test, prediction)
+    acc = accuracy_score(y_test,prediction)
+    print("Confusion Matrix: \n", c_mat)
+    print("Accuracy: ", acc)
+
     print(result)
 
     #https://www.youtube.com/watch?v=HeKchZ1dauM&t=15s => kalo mau nonton tutorial + repo githubnya 
@@ -71,3 +78,7 @@ def add_prediction_to_json_output(prediction):
     
     with open('article_collection.json', 'w', encoding='utf-8') as output_json:
         json.dump(data, output_json, ensure_ascii=False, indent=4)
+
+
+train_topic_detection()
+topic_detection()

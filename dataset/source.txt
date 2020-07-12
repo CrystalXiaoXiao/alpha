@@ -1,2 +1,1 @@
 bbc-text.csv = https://www.kaggle.com/yufengdev/bbc-text-categorization
-News_Category_Dataset_v2.json = https://www.kaggle.com/rmisra/news-category-dataset/data
