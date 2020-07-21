@@ -28,11 +28,12 @@ def preprocessing(data):
     return article    
 
 def train_topic_detection():
-    news_df = pd.read_csv('dataset/bbc-text.csv')
+    # news_df = pd.read_csv('dataset/bbc-text.csv')
+    news_df = pd.read_csv('dataset/dataset.csv')
     count_vectorizer = CountVectorizer()
     # x_train_cv = count_vectorizer.fit_transform(news_df['text'])
 
-    x_train_cv = count_vectorizer.fit_transform(news_df['text'])
+    x_train_cv = count_vectorizer.fit_transform(news_df['news'])
     pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
 
     tfidf_transformer = TfidfTransformer()
@@ -47,6 +48,7 @@ def train_topic_detection():
     prediction = load_mnb.predict(x_test)
 
     result = pd.DataFrame({'actual_label': y_test, 'prediction_label':prediction})
+    # result.to_csv('result_dataset_3.csv', sep = ',')
 
     c_mat = confusion_matrix(y_test, prediction)
     acc = accuracy_score(y_test,prediction)
