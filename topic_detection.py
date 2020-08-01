@@ -10,7 +10,10 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score, confusion_matrix
-
+from sklearn import svm
+from sklearn.neural_network import MLPClassifier
+import xgboost as xgb
+from sklearn import preprocessing as ppros
 
 #print(news_df.shape) Total 2225,2  
 #print(news_df['category'].value_counts()) sport: 511, business: 510, politics: 417, tech: 401, entertainment: 386
@@ -28,12 +31,12 @@ def preprocessing(data):
     return article    
 
 def train_topic_detection():
-    # news_df = pd.read_csv('dataset/bbc-text.csv')
-    news_df = pd.read_csv('dataset/dataset.csv')
+    news_df = pd.read_csv('dataset/bbc-text.csv')
+    # news_df = pd.read_csv('dataset/dataset.csv')
     count_vectorizer = CountVectorizer()
     # x_train_cv = count_vectorizer.fit_transform(news_df['text'])
 
-    x_train_cv = count_vectorizer.fit_transform(news_df['news'])
+    x_train_cv = count_vectorizer.fit_transform(news_df['text'])
     pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
 
     tfidf_transformer = TfidfTransformer()
@@ -41,16 +44,45 @@ def train_topic_detection():
     pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
 
     x_train, x_test, y_train, y_test = train_test_split(x_train_tfidf, news_df['category'], test_size=0.2)
-    clf = MultinomialNB(alpha=0.12).fit(x_train, y_train) #hyperparameter harus di tune, gotta research more on this 
-    pickle.dump(clf, open('model/multinomial_nb.pkl', 'wb'))
+    #Multinomial Naive Bayes
+    # clf = MultinomialNB(alpha=0.12).fit(x_train, y_train) #hyperparameter harus di tune, gotta research more on this 
+    # pickle.dump(clf, open('model/multinomial_nb.pkl', 'wb'))
+    # load_mnb = pickle.load(open('model/multinomial_nb.pkl', 'rb'))
+    # prediction = load_mnb.predict(x_test)
 
-    load_mnb = pickle.load(open('model/multinomial_nb.pkl', 'rb'))
-    prediction = load_mnb.predict(x_test)
+    #SVM
+    # clf = svm.LinearSVC().fit(x_train, y_train)
+    # pickle.dump(clf, open('model/svm.pkl', 'wb'))
+    # load_svm = pickle.load(open('model/svm.pkl', 'rb'))
+    # prediction = load_svm.predict(x_test)
 
-    result = pd.DataFrame({'actual_label': y_test, 'prediction_label':prediction})
-    # result.to_csv('result_dataset_3.csv', sep = ',')
+    #MLPClassifier
+    # clf = MLPClassifier(solver='adam', activation='relu', alpha=3e-4, hidden_layer_sizes=(15,)).fit(x_train, y_train)
+    # pickle.dump(clf, open('model/mlp.pkl', 'wb'))
+    # load_mlp = pickle.load(open('model/mlp.pkl', 'rb'))
+    # prediction = load_mlp.predict(x_test)
 
-    c_mat = confusion_matrix(y_test, prediction)
+    #XGBoost
+    encoder = ppros.LabelEncoder()
+    y_train = encoder.fit_transform(y_train)
+    y_test = encoder.fit_transform(y_test)
+    dtrain = xgb.DMatrix(x_train, label=y_train)
+    dtest = xgb.DMatrix(x_test, label=y_test)
+    param = {
+        'max_depth': 3,  # the maximum depth of each tree
+        'eta': 0.3,  # the training step for each iteration
+        'silent': 1,  # logging mode - quiet
+        'objective': 'multi:softprob',  # error evaluation for multiclass training
+        'num_class': 5}  # the number of classes that exist in this datset
+    num_round = 20  # the number of training iterations
+    bst = xgb.train(param, dtrain, num_round)
+    prediction = bst.predict(dtest)
+    best_preds = np.asarray([np.argmax(line) for line in prediction])
+    
+    result = pd.DataFrame({'actual_label': y_test, 'prediction_label':best_preds})
+    result.to_csv('result_dataset_3.csv', sep = ',')
+
+    c_mat = confusion_matrix(y_test, prediction, labels=['sport', 'business', 'politics', 'tech', 'entertainment'])
     acc = accuracy_score(y_test,prediction)
     print("Confusion Matrix: \n", c_mat)
     print("Accuracy: ", acc)
@@ -83,4 +115,4 @@ def add_prediction_to_json_output(prediction):
 
 
 train_topic_detection()
-topic_detection()
+# topic_detection()
