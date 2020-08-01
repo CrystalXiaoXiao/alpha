@@ -51,11 +51,9 @@ def scraper_cnn(url):
 
 def clean_article(article):
     article = article.replace('  ', ' ') 
-    article = re.sub('\[\d+\]', '', article) #[1]/[2]/[n] => ''
-    article = re.sub('\d+.', '', article) #1. / 2. => ''
     article = re.sub('\"', '', article)
     article = article.replace('\n\n', '\n')
-    article = preprocessing(article)
+    # article = preprocessing(article)
 
     return article
 

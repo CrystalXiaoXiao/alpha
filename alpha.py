@@ -11,7 +11,7 @@ newsapi = NewsApiClient(api_key=key)
 
 def find_news():
     top_headline = newsapi.get_top_headlines(
-                                             sources='bbc-news,nbc-news, cnn',
+                                             sources='bbc-news,nbc-news,cnn',
                                              page_size=12,
                                              page= 1,
     )                                           
@@ -23,7 +23,7 @@ def find_news():
     for x, y in enumerate(articles):
         print(y["title"] + ' : ' + y["url"])
         
-        if (y["content"] is None) or ('/live/' in y["url"] or '/live-news/'in y["url"] or '/videos/' in y["url"]): 
+        if (y["content"] is None or y["content"] == "") or ('/live/' in y["url"] or '/live-news/'in y["url"] or '/videos/' in y["url"]): 
             None
         elif counter < 5:
             try:
