@@ -1,5 +1,4 @@
 from bs4 import BeautifulSoup
-from topic_detection import preprocessing
 import requests
 import re
 
@@ -53,7 +52,5 @@ def clean_article(article):
     article = article.replace('  ', ' ') 
     article = re.sub('\"', '', article)
     article = article.replace('\n\n', '\n')
-    # article = preprocessing(article)
-
     return article
 
