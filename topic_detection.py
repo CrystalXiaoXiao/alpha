@@ -12,6 +12,7 @@ from sklearn.model_selection import train_test_split, KFold
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score, plot_confusion_matrix, classification_report
 from preprocessing import preprocessing
+from sklearn.neural_network import MLPClassifier
 
 # news_df = pd.read_csv('dataset/bbc-combined.csv')
 # print(news_df.shape) #Total 2225,2  
@@ -135,7 +136,7 @@ def train_knn():
         x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
         y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
         
-        clf_knn = KNeighborsClassifier(n_neighbors=5)
+        clf_knn = KNeighborsClassifier(n_neighbors=4)
         clf_knn.fit(x_train, y_train)
         
         pickle.dump(clf_knn, open("model/knn.pkl", "wb"))
@@ -175,6 +176,33 @@ def train_logistic_regression():
     
     print(f"Logistic Regression Mean Accuracy: {sum(res)/len(res)}")  
 
+def train_mlp():
+    res = []
+    news_df = pd.read_csv('dataset/bbc-combined.csv')
+    news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
+    
+    count_vectorizer = CountVectorizer()
+    x_train_cv = count_vectorizer.fit_transform(news_df['text'])
+
+    pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
+
+    tfidf_transformer = TfidfTransformer()
+    x_train_tfidf = tfidf_transformer.fit_transform(x_train_cv)
+    pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
+
+    kf = KFold(n_splits=5, shuffle=True)
+    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):
+        x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
+        y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
+        clf_mlp = MLPClassifier(solver='adam', activation='relu', alpha=3e-4, hidden_layer_sizes=(15,)).fit(x_train, y_train) 
+        pickle.dump(clf_mlp, open('model/mlp.pkl', 'wb'))
+
+        load_mlp = pickle.load(open('model/mlp.pkl', 'rb'))
+        prediction = load_mlp.predict(x_test)
+        print('MLP: ',accuracy_score(y_test,prediction))
+        res.append(accuracy_score(y_test,prediction))
+    
+    print(f"MLP AVG Accuracy: {sum(res)/len(res)}")
 
 def topic_detection():
     test_df = pd.read_json('article_collection.json')
@@ -205,6 +233,7 @@ def add_prediction_to_json_output(prediction):
 # train_naive_bayes()
 # train_svm()
 # train_xgb()
-train_knn()
-train_logistic_regression()
+# train_knn()
+# train_logistic_regression()
+train_mlp()
 # topic_detection()
