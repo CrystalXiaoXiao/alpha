@@ -7,12 +7,14 @@ import xgboost as xgb
 from sklearn import svm
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score, plot_confusion_matrix, classification_report
 from preprocessing import preprocessing
 from sklearn.neural_network import MLPClassifier
+from gensim.models import Word2Vec
+from scipy.sparse import csr_matrix
 
 # news_df = pd.read_csv('dataset/bbc-combined.csv')
 # print(news_df.shape) #Total 2225,2  
@@ -87,6 +89,59 @@ def train_svm():
     print(f"SVM AVG Accuracy: {sum(res)/len(res)}")  
 
     pickle.dump(clf_svm, open("model/svm.pkl", "wb"))
+
+def train_svm_tfidf_weighted_word2vec():
+    res = []
+    news_df = pd.read_csv('dataset/bbc-text.csv')
+    news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
+
+    list_of_sentence=[]
+    for sentence in news_df['text']:
+        list_of_sentence.append(sentence.split())
+
+    w2v_model = Word2Vec(list_of_sentence, min_count=5, size=50, workers=4)
+    w2v_words = list(w2v_model.wv.vocab)
+
+    model = TfidfVectorizer()
+    model.fit(news_df['text'])
+    dictionary = dict(zip(model.get_feature_names(), list((model.idf_))))
+
+    tfidf_feat = model.get_feature_names()
+
+    tfidf_sent_vectors = []
+    for sent in list_of_sentence:
+        sent_vec = np.zeros(50)
+        weight_sum = 0
+        for word in sent:
+            if word in w2v_words and word in tfidf_feat:
+                vec = w2v_model.wv[word]
+                tf_idf = dictionary[word]*(sent.count(word)/len(sent))
+                sent_vec += (vec * tf_idf)
+                weight_sum += tf_idf
+        if weight_sum != 0:
+            sent_vec /= weight_sum
+        tfidf_sent_vectors.append(sent_vec)
+
+    pickle.dump(tfidf_sent_vectors, open('model/tfidf_weighted_word2vec.pkl', 'wb'))
+    x_train_tfidf = csr_matrix(tfidf_sent_vectors)
+
+    kf = KFold(n_splits=5, shuffle=True)
+    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):
+        x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
+        y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
+    
+        clf_svm = svm.SVC(kernel='linear')
+        clf_svm.fit(x_train, y_train)
+        pickle.dump(clf_svm, open("model/svm.pkl", "wb"))
+
+        svm_prediction = clf_svm.predict(x_test)
+        print('SVM: ',accuracy_score(y_test,svm_prediction))
+        res.append(accuracy_score(y_test,svm_prediction))
+    
+    print(f"SVM AVG Accuracy: {sum(res)/len(res)}")  
+        # plot_confusion_matrix(clf_svm, x_test, y_test)
+        # print(classification_report(y_test, svm_prediction))
+        # plt.show()
 
 def train_xgb():
     res = []
@@ -236,12 +291,11 @@ def add_prediction_to_json_output(prediction):
 
 
 # train_naive_bayes()
-train_svm()
+# train_svm()
 # train_xgb()
 # train_knn()
 # train_logistic_regression()
 # train_mlp()
 # topic_detection()
 # count_tf_idf()
-
-
+train_svm_tfidf_weighted_word2vec()
