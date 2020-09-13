@@ -20,7 +20,7 @@ from sklearn.neural_network import MLPClassifier
 
 def train_naive_bayes():
     res = []
-    news_df = pd.read_csv('dataset/bbc-combined.csv')
+    news_df = pd.read_csv('dataset/bbc-text.csv')
     news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
     
     count_vectorizer = CountVectorizer()
@@ -33,7 +33,7 @@ def train_naive_bayes():
     pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
 
     kf = KFold(n_splits=5, shuffle=True)
-    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):
+    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)
         x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
         y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
         clf_mnb = MultinomialNB(alpha=0.12).fit(x_train, y_train) #hyperparameter harus di tune, gotta research more on this 
@@ -54,7 +54,7 @@ def train_naive_bayes():
 
 def train_svm():
     res = []
-    news_df = pd.read_csv('dataset/bbc-combined.csv')
+    news_df = pd.read_csv('dataset/bbc-text.csv')
     news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
     
     count_vectorizer = CountVectorizer()
@@ -67,26 +67,30 @@ def train_svm():
     pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
 
     kf = KFold(n_splits=5, shuffle=True)
-    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):
-        x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
+    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)           
+        x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index] 
         y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
-    
-        clf_svm = svm.SVC(kernel='linear')
+
+        clf_svm = svm.SVC(kernel='linear', C=1.4)
         clf_svm.fit(x_train, y_train)
-        pickle.dump(clf_svm, open("model/svm.pkl", "wb"))
 
         svm_prediction = clf_svm.predict(x_test)
-        print('SVM: ',accuracy_score(y_test,svm_prediction))
-        res.append(accuracy_score(y_test,svm_prediction))
-    
-    print(f"SVM AVG Accuracy: {sum(res)/len(res)}")  
+        # svm_prediction = clf_svm.score(x_train, y_train)
+        # print(svm_prediction)
+
+        print('SVM: ',accuracy_score(y_test ,svm_prediction))
+        res.append(accuracy_score(y_test ,svm_prediction))
         # plot_confusion_matrix(clf_svm, x_test, y_test)
         # print(classification_report(y_test, svm_prediction))
         # plt.show()
 
+    print(f"SVM AVG Accuracy: {sum(res)/len(res)}")  
+
+    pickle.dump(clf_svm, open("model/svm.pkl", "wb"))
+
 def train_xgb():
     res = []
-    news_df = pd.read_csv('dataset/bbc-combined.csv')
+    news_df = pd.read_csv('dataset/bbc-text.csv')
     news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
     
     count_vectorizer = CountVectorizer()
@@ -99,7 +103,7 @@ def train_xgb():
     pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
 
     kf = KFold(n_splits=5, shuffle=True)
-    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):
+    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)
         x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
         y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
         clf_xgb = xgb.XGBClassifier(objective='multimax:softmax', num_class=5)
@@ -132,7 +136,7 @@ def train_knn():
 
 
     kf = KFold(n_splits=5, shuffle=True)
-    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):
+    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)
         x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
         y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
         
@@ -148,7 +152,8 @@ def train_knn():
 
 def train_logistic_regression():
     res = []
-    news_df = pd.read_csv('dataset/bbc-combined.csv')
+    news_df = pd.read_csv('dataset/bbc-text.csv')
+    print(news_df)
     news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
     
     count_vectorizer = CountVectorizer()
@@ -162,7 +167,7 @@ def train_logistic_regression():
 
 
     kf = KFold(n_splits=5, shuffle=True)
-    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):
+    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)
         x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
         y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
         
@@ -178,7 +183,7 @@ def train_logistic_regression():
 
 def train_mlp():
     res = []
-    news_df = pd.read_csv('dataset/bbc-combined.csv')
+    news_df = pd.read_csv('dataset/bbc-text.csv')
     news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
     
     count_vectorizer = CountVectorizer()
@@ -191,7 +196,7 @@ def train_mlp():
     pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
 
     kf = KFold(n_splits=5, shuffle=True)
-    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):
+    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)
         x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
         y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
         clf_mlp = MLPClassifier(solver='adam', activation='relu', alpha=3e-4, hidden_layer_sizes=(15,)).fit(x_train, y_train) 
@@ -231,9 +236,12 @@ def add_prediction_to_json_output(prediction):
 
 
 # train_naive_bayes()
-# train_svm()
+train_svm()
 # train_xgb()
 # train_knn()
 # train_logistic_regression()
-train_mlp()
+# train_mlp()
 # topic_detection()
+# count_tf_idf()
+
+
