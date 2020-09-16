@@ -143,6 +143,51 @@ def train_svm_tfidf_weighted_word2vec():
         # print(classification_report(y_test, svm_prediction))
         # plt.show()
 
+def train_svm_word2vec_avg():
+    res = []
+    news_df = pd.read_csv('dataset/bbc-text.csv')
+    news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
+
+    list_of_sentence=[]
+    for sentence in news_df['text']:
+        list_of_sentence.append(sentence.split())
+
+    w2v_model = Word2Vec(list_of_sentence, min_count=5, size=50, workers=4)
+    w2v_words = list(w2v_model.wv.vocab)
+
+    sent_vectors = []
+    for sentence in list_of_sentence:
+        sent_vec = np.zeros(50)
+        cnt_words = 0
+        for word in sentence:
+            if word in w2v_words:
+                vec = w2v_model.wv[word]
+                sent_vec += vec
+                cnt_words += 1
+        if cnt_words != 0:
+            sent_vec /= cnt_words
+        sent_vectors.append(sent_vec)
+
+    x_train_w2v = csr_matrix(sent_vectors)
+
+    kf = KFold(n_splits=5, shuffle=True)
+    for train_index, test_index in kf.split(x_train_w2v, news_df['category']):
+        x_train, x_test = x_train_w2v[train_index], x_train_w2v[test_index]
+        y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
+    
+        clf_svm = svm.SVC(kernel='linear')
+        clf_svm.fit(x_train, y_train)
+        pickle.dump(clf_svm, open("model/svm.pkl", "wb"))
+
+        svm_prediction = clf_svm.predict(x_test)
+        print('SVM: ',accuracy_score(y_test,svm_prediction))
+        res.append(accuracy_score(y_test,svm_prediction))
+    
+    print(f"SVM AVG Accuracy: {sum(res)/len(res)}")  
+        # plot_confusion_matrix(clf_svm, x_test, y_test)
+        # print(classification_report(y_test, svm_prediction))
+        # plt.show()
+
 def train_xgb():
     res = []
     news_df = pd.read_csv('dataset/bbc-text.csv')
@@ -298,4 +343,5 @@ def add_prediction_to_json_output(prediction):
 # train_mlp()
 # topic_detection()
 # count_tf_idf()
-train_svm_tfidf_weighted_word2vec()
+# train_svm_tfidf_weighted_word2vec()
+train_svm_word2vec_avg()
