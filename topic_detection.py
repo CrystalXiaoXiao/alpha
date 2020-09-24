@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import xgboost as xgb
 from sklearn import svm
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.naive_bayes import MultinomialNB
@@ -308,7 +308,7 @@ def train_mlp():
     for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)
         x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
         y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
-        clf_mlp = MLPClassifier(solver='adam', activation='relu', alpha=3e-4, hidden_layer_sizes=(15,)).fit(x_train, y_train) 
+        clf_mlp = MLPClassifier(solver='adam', activation='relu', alpha=0.0001, hidden_layer_sizes=(15,), max_iter=300).fit(x_train, y_train) 
         pickle.dump(clf_mlp, open('model/mlp.pkl', 'wb'))
 
         load_mlp = pickle.load(open('model/mlp.pkl', 'rb'))
@@ -317,6 +317,35 @@ def train_mlp():
         res.append(accuracy_score(y_test,prediction))
     
     print(f"MLP AVG Accuracy: {sum(res)/len(res)}")
+
+def train_sgd():
+    res = []
+    news_df = pd.read_csv('dataset/bbc-text.csv')
+    news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
+    
+    count_vectorizer = CountVectorizer()
+    x_train_cv = count_vectorizer.fit_transform(news_df['text'])
+
+    pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
+
+    tfidf_transformer = TfidfTransformer()
+    x_train_tfidf = tfidf_transformer.fit_transform(x_train_cv)
+    pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
+
+    kf = KFold(n_splits=5, shuffle=True)
+    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)
+        x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
+        y_train, y_test = news_df['category'][train_index], news_df['category'][test_index]
+        
+        clf_sgd = SGDClassifier(loss='hinge', alpha=0.0001, max_iter=500, shuffle=True).fit(x_train, y_train) 
+        pickle.dump(clf_sgd, open('model/sgd.pkl', 'wb'))
+
+        load_sgd = pickle.load(open('model/sgd.pkl', 'rb'))
+        prediction = load_sgd.predict(x_test)
+        print('SGD: ',accuracy_score(y_test,prediction))
+        res.append(accuracy_score(y_test,prediction))
+    
+    print(f"SGD AVG Accuracy: {sum(res)/len(res)}")
 
 def topic_detection():
     test_df = pd.read_json('article_collection.json')
@@ -375,5 +404,5 @@ train_svm()
 # train_svm_tfidf_weighted_word2vec()
 # train_svm_word2vec_avg()
 # train_svm()
-
+# train_sgd()
 # data_dummy()
