@@ -1,1 +1,2 @@
-bbc-text.csv = https://www.kaggle.com/yufengdev/bbc-text-categorization
+bbc-text.csv = https://www.kaggle.com/yufengdev/bbc-text-categorization OR http://mlg.ucd.ie/datasets/bbc.html?
+bbc_scrape.csv = bbc-text + scraped from bbc (29 December 2018 - 16 September 2020) for health category 

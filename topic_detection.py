@@ -15,7 +15,7 @@ from preprocessing import preprocessing
 from sklearn.neural_network import MLPClassifier
 from gensim.models import Word2Vec
 from scipy.sparse import csr_matrix
-
+import math
 # news_df = pd.read_csv('dataset/bbc-combined.csv')
 # print(news_df.shape) #Total 2225,2  
 # print(news_df['category'].value_counts()) #sport: 1022, business: 1020, politics: 834, tech: 802, entertainment: 772
@@ -58,15 +58,24 @@ def train_svm():
     res = []
     news_df = pd.read_csv('dataset/bbc-text.csv')
     news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
-    
+
     count_vectorizer = CountVectorizer()
     x_train_cv = count_vectorizer.fit_transform(news_df['text'])
 
     pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
 
     tfidf_transformer = TfidfTransformer()
-    x_train_tfidf = tfidf_transformer.fit_transform(x_train_cv)
+    tfidf = tfidf_transformer.fit_transform(x_train_cv)
     pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
+
+    matrix = tfidf.toarray()
+
+    for i in range(0, len(matrix)):
+        N = len(news_df.index) 
+        n1 = (news_df['category']==news_df['category'][i]).sum()
+        matrix[i] = matrix[i] * math.log2( N/n1)
+
+    x_train_tfidf = csr_matrix(matrix)
 
     kf = KFold(n_splits=5, shuffle=True)
     for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)           
@@ -334,14 +343,37 @@ def add_prediction_to_json_output(prediction):
     with open('article_collection.json', 'w', encoding='utf-8') as output_json:
         json.dump(data, output_json, ensure_ascii=False, indent=4)
 
+def data_dummy():
+    res = []
+    news_df = pd.DataFrame({
+        "text":["The deadly viruses that vanished without trace","Ndombele give an immediate impact for Spurs", "Virus impact on immune system", "Spurs win on new tactical system"],
+        "category":["health","sports","health","sports"]
+    })
+    news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
+
+    count_vectorizer = CountVectorizer()
+    x_train_cv = count_vectorizer.fit_transform(news_df['text'])
+    tfidf_transformer = TfidfTransformer()
+    x_train_tfidf = tfidf_transformer.fit_transform(x_train_cv)
+    matrix = x_train_tfidf.toarray()
+
+    for i in range(0, len(matrix)):
+        N = len(news_df.index) 
+        n1 = (news_df['category']==news_df['category'][i]).sum()
+        matrix[i] = matrix[i] * math.log2( N/n1)
+
+    x_train_tfidf = csr_matrix(matrix)
+    print(pd.DataFrame(x_train_tfidf.toarray(), columns=count_vectorizer.get_feature_names()))
 
 # train_naive_bayes()
-# train_svm()
+train_svm()
 # train_xgb()
 # train_knn()
 # train_logistic_regression()
 # train_mlp()
 # topic_detection()
-# count_tf_idf()
 # train_svm_tfidf_weighted_word2vec()
-train_svm_word2vec_avg()
+# train_svm_word2vec_avg()
+# train_svm()
+
+# data_dummy()
