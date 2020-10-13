@@ -14,6 +14,7 @@ def preprocessing(data):
     article = ' '.join(article)
     article = article.lower()
     article = article.translate(str.maketrans('', '', string.punctuation)) #remove punctuation
+    article = re.sub('  ', ' ', article) 
     article = re.sub('\[\d+\]', '', article) #[1]/[2]/[n] => ''
     article = re.sub('\d+', '', article) #1, 2, 3
     article = article.strip()

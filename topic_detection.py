@@ -3,56 +3,16 @@ import pandas as pd
 import pickle
 import json
 import matplotlib.pyplot as plt  
-import xgboost as xgb
 from sklearn import svm
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.model_selection import train_test_split, KFold
-from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score, plot_confusion_matrix, classification_report
 from preprocessing import preprocessing
-from sklearn.neural_network import MLPClassifier
-from gensim.models import Word2Vec
 from scipy.sparse import csr_matrix
 import math
 # news_df = pd.read_csv('dataset/bbc-combined.csv')
 # print(news_df.shape) #Total 2225,2  
 # print(news_df['category'].value_counts()) #sport: 1022, business: 1020, politics: 834, tech: 802, entertainment: 772
-
-def train_naive_bayes():
-    res = []
-    news_df = pd.read_csv('dataset/bbc-text.csv')
-    news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
-    
-    count_vectorizer = CountVectorizer()
-    x_train_cv = count_vectorizer.fit_transform(news_df['text'])
-
-    pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
-
-    tfidf_transformer = TfidfTransformer()
-    x_train_tfidf = tfidf_transformer.fit_transform(x_train_cv)
-    pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
-
-    kf = KFold(n_splits=5, shuffle=True)
-    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)
-        x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
-        y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
-        clf_mnb = MultinomialNB(alpha=0.12).fit(x_train, y_train) #hyperparameter harus di tune, gotta research more on this 
-        pickle.dump(clf_mnb, open('model/multinomial_nb.pkl', 'wb'))
-
-        load_mnb = pickle.load(open('model/multinomial_nb.pkl', 'rb'))
-        prediction = load_mnb.predict(x_test)
-        print('MNB: ',accuracy_score(y_test,prediction))
-        res.append(accuracy_score(y_test,prediction))
-    
-    print(f"MNB AVG Accuracy: {sum(res)/len(res)}")  
-
-        # plot_confusion_matrix(clf_mnb, x_test, y_test)
-        # print(classification_report(y_test, prediction))
-        # plt.show()
-
-        #https://www.youtube.com/watch?v=HeKchZ1dauM&t=15s => kalo mau nonton tutorial + repo githubnya 
 
 def train_svm():
     res = []
@@ -76,6 +36,7 @@ def train_svm():
         matrix[i] = matrix[i] * math.log2( N/n1)
 
     x_train_tfidf = csr_matrix(matrix)
+    print(pd.DataFrame(x_train_tfidf.toarray(), columns=count_vectorizer.get_feature_names()))
 
     kf = KFold(n_splits=5, shuffle=True)
     for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)           
@@ -98,254 +59,6 @@ def train_svm():
     print(f"SVM AVG Accuracy: {sum(res)/len(res)}")  
 
     pickle.dump(clf_svm, open("model/svm.pkl", "wb"))
-
-def train_svm_tfidf_weighted_word2vec():
-    res = []
-    news_df = pd.read_csv('dataset/bbc-text.csv')
-    news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
-
-    list_of_sentence=[]
-    for sentence in news_df['text']:
-        list_of_sentence.append(sentence.split())
-
-    w2v_model = Word2Vec(list_of_sentence, min_count=5, size=50, workers=4)
-    w2v_words = list(w2v_model.wv.vocab)
-
-    model = TfidfVectorizer()
-    model.fit(news_df['text'])
-    dictionary = dict(zip(model.get_feature_names(), list((model.idf_))))
-
-    tfidf_feat = model.get_feature_names()
-
-    tfidf_sent_vectors = []
-    for sent in list_of_sentence:
-        sent_vec = np.zeros(50)
-        weight_sum = 0
-        for word in sent:
-            if word in w2v_words and word in tfidf_feat:
-                vec = w2v_model.wv[word]
-                tf_idf = dictionary[word]*(sent.count(word)/len(sent))
-                sent_vec += (vec * tf_idf)
-                weight_sum += tf_idf
-        if weight_sum != 0:
-            sent_vec /= weight_sum
-        tfidf_sent_vectors.append(sent_vec)
-
-    pickle.dump(tfidf_sent_vectors, open('model/tfidf_weighted_word2vec.pkl', 'wb'))
-    x_train_tfidf = csr_matrix(tfidf_sent_vectors)
-
-    kf = KFold(n_splits=5, shuffle=True)
-    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):
-        x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
-        y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
-    
-        clf_svm = svm.SVC(kernel='linear')
-        clf_svm.fit(x_train, y_train)
-        pickle.dump(clf_svm, open("model/svm.pkl", "wb"))
-
-        svm_prediction = clf_svm.predict(x_test)
-        print('SVM: ',accuracy_score(y_test,svm_prediction))
-        res.append(accuracy_score(y_test,svm_prediction))
-    
-    print(f"SVM AVG Accuracy: {sum(res)/len(res)}")  
-        # plot_confusion_matrix(clf_svm, x_test, y_test)
-        # print(classification_report(y_test, svm_prediction))
-        # plt.show()
-
-def train_svm_word2vec_avg():
-    res = []
-    news_df = pd.read_csv('dataset/bbc-text.csv')
-    news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
-
-    list_of_sentence=[]
-    for sentence in news_df['text']:
-        list_of_sentence.append(sentence.split())
-
-    w2v_model = Word2Vec(list_of_sentence, min_count=5, size=50, workers=4)
-    w2v_words = list(w2v_model.wv.vocab)
-
-    sent_vectors = []
-    for sentence in list_of_sentence:
-        sent_vec = np.zeros(50)
-        cnt_words = 0
-        for word in sentence:
-            if word in w2v_words:
-                vec = w2v_model.wv[word]
-                sent_vec += vec
-                cnt_words += 1
-        if cnt_words != 0:
-            sent_vec /= cnt_words
-        sent_vectors.append(sent_vec)
-
-    x_train_w2v = csr_matrix(sent_vectors)
-
-    kf = KFold(n_splits=5, shuffle=True)
-    for train_index, test_index in kf.split(x_train_w2v, news_df['category']):
-        x_train, x_test = x_train_w2v[train_index], x_train_w2v[test_index]
-        y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
-    
-        clf_svm = svm.SVC(kernel='linear')
-        clf_svm.fit(x_train, y_train)
-        pickle.dump(clf_svm, open("model/svm.pkl", "wb"))
-
-        svm_prediction = clf_svm.predict(x_test)
-        print('SVM: ',accuracy_score(y_test,svm_prediction))
-        res.append(accuracy_score(y_test,svm_prediction))
-    
-    print(f"SVM AVG Accuracy: {sum(res)/len(res)}")  
-        # plot_confusion_matrix(clf_svm, x_test, y_test)
-        # print(classification_report(y_test, svm_prediction))
-        # plt.show()
-
-def train_xgb():
-    res = []
-    news_df = pd.read_csv('dataset/bbc-text.csv')
-    news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
-    
-    count_vectorizer = CountVectorizer()
-    x_train_cv = count_vectorizer.fit_transform(news_df['text'])
-
-    pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
-
-    tfidf_transformer = TfidfTransformer()
-    x_train_tfidf = tfidf_transformer.fit_transform(x_train_cv)
-    pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
-
-    kf = KFold(n_splits=5, shuffle=True)
-    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)
-        x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
-        y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
-        clf_xgb = xgb.XGBClassifier(objective='multimax:softmax', num_class=5)
-        clf_xgb.fit(x_train, y_train)
-        pickle.dump(clf_xgb, open("model/xgboost.pkl", "wb"))
-        
-        xgboost_prediction = clf_xgb.predict(x_test)
-        print('XGB: ',accuracy_score(y_test,xgboost_prediction))
-        res.append(accuracy_score(y_test,xgboost_prediction))
-    
-    print(f"XGB Average Accuracy: {sum(res)/len(res)}")  
-
-        # plot_confusion_matrix(clf_xgb, x_test, y_test)
-        # print(classification_report(y_test, xgboost_prediction))
-        # plt.show()
-
-def train_knn():
-    res = []
-    news_df = pd.read_csv('dataset/bbc-combined.csv')
-    news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
-    
-    count_vectorizer = CountVectorizer()
-    x_train_cv = count_vectorizer.fit_transform(news_df['text'])
-
-    pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
-
-    tfidf_transformer = TfidfTransformer()
-    x_train_tfidf = tfidf_transformer.fit_transform(x_train_cv)
-    pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
-
-
-    kf = KFold(n_splits=5, shuffle=True)
-    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)
-        x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
-        y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
-        
-        clf_knn = KNeighborsClassifier(n_neighbors=4)
-        clf_knn.fit(x_train, y_train)
-        
-        pickle.dump(clf_knn, open("model/knn.pkl", "wb"))
-        knn_prediction = clf_knn.predict(x_test)
-        print('KNN: ',accuracy_score(y_test,knn_prediction))
-        res.append(accuracy_score(y_test,knn_prediction))
-    
-    print(f"KNN Mean Accuracy: {sum(res)/len(res)}")  
-
-def train_logistic_regression():
-    res = []
-    news_df = pd.read_csv('dataset/bbc-text.csv')
-    print(news_df)
-    news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
-    
-    count_vectorizer = CountVectorizer()
-    x_train_cv = count_vectorizer.fit_transform(news_df['text'])
-
-    pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
-
-    tfidf_transformer = TfidfTransformer()
-    x_train_tfidf = tfidf_transformer.fit_transform(x_train_cv)
-    pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
-
-
-    kf = KFold(n_splits=5, shuffle=True)
-    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)
-        x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
-        y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
-        
-        clf_lr = LogisticRegression()
-        clf_lr.fit(x_train, y_train)
-        pickle.dump(clf_lr, open("model/lr.pkl", "wb"))
-
-        lr_prediction = clf_lr.predict(x_test)
-        print('LR: ',accuracy_score(y_test,lr_prediction))
-        res.append(accuracy_score(y_test,lr_prediction))
-    
-    print(f"Logistic Regression Mean Accuracy: {sum(res)/len(res)}")  
-
-def train_mlp():
-    res = []
-    news_df = pd.read_csv('dataset/bbc-text.csv')
-    news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
-    
-    count_vectorizer = CountVectorizer()
-    x_train_cv = count_vectorizer.fit_transform(news_df['text'])
-
-    pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
-
-    tfidf_transformer = TfidfTransformer()
-    x_train_tfidf = tfidf_transformer.fit_transform(x_train_cv)
-    pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
-
-    kf = KFold(n_splits=5, shuffle=True)
-    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)
-        x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
-        y_train, y_test = news_df['category'][train_index], news_df['category'][test_index] 
-        clf_mlp = MLPClassifier(solver='adam', activation='relu', alpha=0.0001, hidden_layer_sizes=(15,), max_iter=300).fit(x_train, y_train) 
-        pickle.dump(clf_mlp, open('model/mlp.pkl', 'wb'))
-
-        load_mlp = pickle.load(open('model/mlp.pkl', 'rb'))
-        prediction = load_mlp.predict(x_test)
-        print('MLP: ',accuracy_score(y_test,prediction))
-        res.append(accuracy_score(y_test,prediction))
-    
-    print(f"MLP AVG Accuracy: {sum(res)/len(res)}")
-
-def train_sgd():
-    res = []
-    news_df = pd.read_csv('dataset/bbc-text.csv')
-    news_df['text'] = news_df['text'].apply(lambda x: preprocessing(x))
-    
-    count_vectorizer = CountVectorizer()
-    x_train_cv = count_vectorizer.fit_transform(news_df['text'])
-
-    pickle.dump(count_vectorizer.vocabulary_, open('model/count_vector.pkl', 'wb'))
-
-    tfidf_transformer = TfidfTransformer()
-    x_train_tfidf = tfidf_transformer.fit_transform(x_train_cv)
-    pickle.dump(tfidf_transformer, open('model/tfidf.pkl', 'wb'))
-
-    kf = KFold(n_splits=5, shuffle=True)
-    for train_index, test_index in kf.split(x_train_tfidf, news_df['category']):  #training_data (n_sample, n_feature) , target variable (n_sample)
-        x_train, x_test = x_train_tfidf[train_index], x_train_tfidf[test_index]
-        y_train, y_test = news_df['category'][train_index], news_df['category'][test_index]
-        
-        clf_sgd = SGDClassifier(loss='hinge', alpha=0.0001, max_iter=500, shuffle=True).fit(x_train, y_train) 
-        pickle.dump(clf_sgd, open('model/sgd.pkl', 'wb'))
-
-        load_sgd = pickle.load(open('model/sgd.pkl', 'rb'))
-        prediction = load_sgd.predict(x_test)
-        print('SGD: ',accuracy_score(y_test,prediction))
-        res.append(accuracy_score(y_test,prediction))
-    
-    print(f"SGD AVG Accuracy: {sum(res)/len(res)}")
 
 def topic_detection():
     test_df = pd.read_json('article_collection.json')
@@ -394,15 +107,6 @@ def data_dummy():
     x_train_tfidf = csr_matrix(matrix)
     print(pd.DataFrame(x_train_tfidf.toarray(), columns=count_vectorizer.get_feature_names()))
 
-# train_naive_bayes()
 train_svm()
-# train_xgb()
-# train_knn()
-# train_logistic_regression()
-# train_mlp()
 # topic_detection()
-# train_svm_tfidf_weighted_word2vec()
-# train_svm_word2vec_avg()
-# train_svm()
-# train_sgd()
 # data_dummy()
