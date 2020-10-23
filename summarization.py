@@ -1,28 +1,62 @@
 from transformers import BartTokenizer, BartForConditionalGeneration, BartConfig
 import torch 
 import pandas as pd 
+import nltk
 
-
-text = """
-Tottenham Hotspur boss Jose Mourinho says he trusts England manager Gareth Southgate and Wales counterpart Ryan Giggs to protect his players. 
-Spurs will play their eighth game since 13 September when they travel to Manchester United on Sunday. 
-The Old Trafford match falls prior to an international break when countries play three games in a week. "You know, I believe that Gareth and [assistant] Steve [Holland], 
-they care about the players," said Mourinho. Mourinho worked with Southgate's assistant Holland at Chelsea but says he will not request that England captain Kane is rested 
-by his country and is confident the international coaching teams will look after his players' welfare. "I don't think they want to be connected with something that can be 
-a consequence of this week and the three international matches, which is obviously too much, especially for my players," added the Portuguese.
-"So I don't speak with Gareth or even with Steve, and of course with Steve I am a very good friends. I just let them do the job in the way they want to do it with 
-the freedom they deserve. "I didn't speak with Ryan Giggs either. I just leave with them the respect they will have for their players. The players are our players but also theirs." 
-Tottenham played Newcastle United on Sunday and Chelsea on Tuesday prior to games against Maccabi Haifa on Thursday and Manchester United on Sunday. 
-"Hopefully, Gareth and Steve understand what happened with Tottenham this week and they respect the players," added Mourinho. 
-"That's just my hope but I'm not going to call, or ask, or beg. I'm not going to press. I think they deserve their freedom and I have the utmost respect for them."
-"""
-model = BartForConditionalGeneration.from_pretrained('facebook/bart-large-cnn')
-tokenizer = BartTokenizer.from_pretrained('facebook/bart-large-cnn')
+bart_tokenizer = BartTokenizer.from_pretrained('facebook/bart-large-cnn')
+bart_model = BartForConditionalGeneration.from_pretrained('facebook/bart-large-cnn')
 
 news_df = pd.read_json('article_collection.json')
 
-for text in news_df['content']:
-    inputs = tokenizer([text], max_length=1024, return_tensors='pt')
-    summary_ids = model.generate(inputs['input_ids'])
-    print([tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=False) for g in summary_ids])
+# for text in news_df['content']:
+# inputs = bart_tokenizer([text], truncation=False, min_length=0, max_length=1024, return_tensors='pt')
+# summary_ids = bart_model.generate(inputs['input_ids'], max_target_length=100)
+# print([bart_tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=False) for g in summary_ids])
 
+# generate chunks of text \ sentences <= 1024 tokens
+#append terus sentence yang di tokenize sampai lengthnya 1024 (ke sent)
+#kalau sudah lebih dari 1024, maka sent diappend ke nested, lalu bikin sent baru
+#nested isinya chunk2 yang length < 1024
+def nest_sentences(document):
+  nested = []
+  sent = []
+  length = 0
+  for sentence in nltk.sent_tokenize(document):
+    length += len(sentence)
+    if length < 1024:
+      sent.append(sentence)
+    else:
+      nested.append(sent)
+      sent = [sentence]
+      length = len(sentence)
+
+  if sent:
+    nested.append(sent)
+  return nested
+  
+# generate summary on text with <= 1024 tokens
+def generate_summary(nested_sentences):
+  summaries = []
+  for nested in nested_sentences:
+    input_tokenized = bart_tokenizer.encode(' '.join(nested), return_tensors='pt')
+    print(nested)
+    print(input_tokenized)
+    # input_tokenized = input_tokenized.to(device)
+    summary_ids = bart_model.generate(input_tokenized,
+                                      min_length=0,
+                                      max_length=1024)
+    output = [bart_tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=False) for g in summary_ids]
+    summaries.append(output)
+  summaries = [sentence for sublist in summaries for sentence in sublist]
+  return summaries
+
+for text in news_df['content']:
+  total_length = len(text)
+  while total_length > 500:
+    nested = nest_sentences(text)
+    summary = generate_summary(nested)
+    summarized = ' '.join(summary)
+    text = summarized
+    total_length = len(summarized)
+  
+  print('Summary News: ', summarized)
